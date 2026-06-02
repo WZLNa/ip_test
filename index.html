@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>IP 查询 Max · 全接口聚合版</title>
+<style>
+  :root{
+    --bg1:#0b1220; --bg2:#111a2e; --card:rgba(255,255,255,.06); --card-br:rgba(255,255,255,.12);
+    --txt:#eaf0ff; --muted:#93a0bd; --accent:#4f8cff; --accent2:#22d3a6;
+    --ok:#22d3a6; --bad:#ff6b6b; --warn:#ffcc66; --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--txt); min-height:100vh; line-height:1.5;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(79,140,255,.20), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgba(34,211,166,.16), transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+    background-attachment:fixed;
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:28px 18px 60px}
+  header.top{display:flex; align-items:center; gap:12px; margin-bottom:6px; flex-wrap:wrap}
+  header.top h1{font-size:22px; margin:0; letter-spacing:.5px}
+  header.top .dot{width:10px;height:10px;border-radius:50%;background:var(--accent2);box-shadow:0 0 14px var(--accent2)}
+  header.top .ver{font-size:11px; color:var(--accent2); background:rgba(34,211,166,.12); padding:2px 10px; border-radius:12px}
+  .sub{color:var(--muted); font-size:13px; margin:2px 0 22px}
+
+  .hero{
+    position:relative; border-radius:18px; padding:22px 22px 20px;
+    background:linear-gradient(135deg, rgba(79,140,255,.20), rgba(34,211,166,.12)), var(--card);
+    border:1px solid var(--card-br); box-shadow:var(--shadow); overflow:hidden;
+  }
+  .hero .label{font-size:13px; color:var(--muted); display:flex; align-items:center; gap:8px}
+  .hero .ipline{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:6px 0 4px}
+  .hero .ip{font-size:clamp(26px,6vw,42px); font-weight:800; letter-spacing:1px; word-break:break-all;
+    background:linear-gradient(90deg,#cfe0ff,#bff3e4); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero .loc{color:#dfe7ff; font-size:15px}
+  .hero .isp{color:var(--muted); font-size:13px; margin-top:2px}
+  .hero .tz{color:var(--muted); font-size:12px; margin-top:1px}
+  .hero .hero-extra{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px}
+  .hero .hero-extra span{font-size:12px; color:var(--muted); display:inline-flex; align-items:center; gap:4px}
+  .hero .conf-badge{display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; margin-left:6px}
+  .hero .conf-badge.high{background:rgba(34,211,166,.16); color:var(--ok)}
+  .hero .conf-badge.mid{background:rgba(255,204,102,.16); color:var(--warn)}
+  .hero .conf-badge.low{background:rgba(255,107,107,.16); color:var(--bad)}
+  .hero .src{position:absolute; right:16px; top:14px; font-size:11px; color:var(--muted)}
+  .hero.loading .ip{font-size:24px; background:none; color:var(--muted)}
+
+  .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+  button, .btn{
+    cursor:pointer; border:1px solid var(--card-br); color:var(--txt); background:rgba(255,255,255,.08);
+    padding:9px 14px; border-radius:10px; font-size:13.5px; transition:.18s; font-family:inherit;
+    display:inline-flex; align-items:center; gap:7px; text-decoration:none;
+  }
+  button:hover,.btn:hover{background:rgba(255,255,255,.16); transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  button.primary{background:linear-gradient(135deg,var(--accent),#3b78ff); border-color:transparent}
+  button.primary:hover{filter:brightness(1.08)}
+  button:disabled{opacity:.5; cursor:not-allowed; transform:none}
+
+  h2.sec{font-size:15px; margin:34px 0 4px; display:flex; align-items:center; gap:9px}
+  h2.sec .tag{font-size:11px; color:var(--muted); font-weight:400}
+  h2.sec .count{font-size:11px; color:var(--accent2); font-weight:400; margin-left:auto}
+  .hint{font-size:12.5px; color:var(--muted); margin:0 0 14px}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(248px,1fr)); gap:14px}
+  .card{
+    border-radius:14px; padding:15px 16px; background:var(--card); border:1px solid var(--card-br);
+    box-shadow:var(--shadow); min-height:104px; display:flex; flex-direction:column; gap:6px;
+  }
+  .card .name{display:flex; align-items:center; justify-content:space-between; font-size:13.5px; font-weight:600}
+  .card .name .badge{font-size:11px; padding:2px 8px; border-radius:20px; font-weight:600}
+  .badge.run{background:rgba(255,204,102,.16); color:var(--warn)}
+  .badge.ok{background:rgba(34,211,166,.16); color:var(--ok)}
+  .badge.bad{background:rgba(255,107,107,.16); color:var(--bad)}
+  .card .cip{font-size:18px; font-weight:700; word-break:break-all; color:#eaf2ff}
+  .card .cloc{font-size:12.5px; color:#cdd7f0}
+  .card .cextra{font-size:11.5px; color:var(--muted)}
+  .card .ctz{font-size:11px; color:var(--muted)}
+  .card .cerr{font-size:12px; color:var(--bad)}
+  .card .mini{margin-top:auto; display:flex; gap:8px}
+  .card .mini button{padding:4px 9px; font-size:11.5px; border-radius:8px}
+  .skel{height:13px;border-radius:6px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.14),rgba(255,255,255,.06));
+    background-size:200% 100%; animation:sh 1.2s infinite}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  .region-note{display:flex;gap:8px;align-items:flex-start;background:rgba(79,140,255,.1);border:1px solid rgba(79,140,255,.25);
+    border-radius:12px;padding:10px 13px;font-size:12.5px;color:#cfe0ff;margin-bottom:14px}
+
+  .lookup{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+  .lookup input{
+    flex:1; min-width:220px; padding:11px 14px; border-radius:11px; font-size:15px; font-family:inherit;
+    background:rgba(255,255,255,.06); border:1px solid var(--card-br); color:var(--txt); outline:none;
+  }
+  .lookup input:focus{border-color:var(--accent); background:rgba(255,255,255,.1)}
+  .lookup input::placeholder{color:#6b779a}
+
+  .links{display:flex; gap:10px; flex-wrap:wrap}
+  footer.note{margin-top:36px; font-size:12px; color:var(--muted); border-top:1px solid var(--card-br); padding-top:16px}
+  footer.note code{background:rgba(255,255,255,.08); padding:1px 6px; border-radius:5px; color:#cdd7f0}
+  footer.note b{color:#cfe0ff}
+
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+    background:#1b2540; border:1px solid var(--card-br); color:var(--txt); padding:10px 18px; border-radius:12px;
+    box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:.25s; font-size:13.5px; z-index:50}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <span class="dot"></span>
+    <h1>IP 查询 Max</h1>
+    <span class="ver">全接口聚合版</span>
+  </header>
+  <p class="sub">整合 20 个公开接口 + 4 地出口视角 · 支持查询任意 IP · 纯前端运行 · 智能投票共识</p>
+
+  <!-- 本机公网 IP -->
+  <div class="hero loading" id="hero">
+    <div class="src" id="heroSrc"></div>
+    <div class="label">🌐 本机公网 IP</div>
+    <div class="ipline">
+      <span class="ip" id="heroIp">查询中…</span>
+      <button class="primary" id="copyBtn" title="复制 IP">⧉ 复制</button>
+    </div>
+    <div class="loc" id="heroLoc"></div>
+    <div class="isp" id="heroIsp"></div>
+    <div class="tz" id="heroTz"></div>
+    <div class="hero-extra">
+      <span id="heroLoc2"></span>
+      <span id="heroAsn"></span>
+    </div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span id="consensus" style="font-size:12px"></span>
+    </div>
+    <div class="btns">
+      <button id="refreshBtn">↻ 重新查询</button>
+    </div>
+  </div>
+
+  <!-- 多接口交叉验证 -->
+  <h2 class="sec">🔎 多接口交叉验证 <span class="tag">同时调用 20 个接口，结果一致更可信</span><span class="count" id="okCount"></span></h2>
+  <p class="hint">不同接口的归属地数据库不同，城市/运营商略有差异属正常现象。</p>
+  <div class="grid" id="myGrid"></div>
+
+  <!-- 多地出口视角 -->
+  <h2 class="sec">🛰️ 多地网络出口视角</h2>
+  <div class="region-note">
+    <span>ℹ️</span>
+    <span>从不同地区的服务器"看"你的出口 IP。若你在使用代理 / VPN / CDN 加速，各地看到的 IP 可能不同——这能帮助你判断真实出口与链路走向。</span>
+  </div>
+  <div class="grid" id="regionGrid"></div>
+
+  <!-- 查询任意 IP -->
+  <h2 class="sec">🎯 查询任意 IP</h2>
+  <p class="hint">输入一个 IPv4 / IPv6 地址，查询其归属地（留空则查本机）。支持 7 个接口交叉验证。</p>
+  <div class="lookup">
+    <input id="lookupInput" type="text" placeholder="例如 8.8.8.8 / 1.1.1.1 / 240e::1" autocomplete="off" spellcheck="false">
+    <button class="primary" id="lookupBtn">查询</button>
+    <button id="lookupMineBtn">查本机</button>
+  </div>
+  <div class="grid" id="lookupGrid"></div>
+
+  <!-- 其他接口（浏览器限制，手动打开） -->
+  <h2 class="sec">🧩 其他链接 <span class="tag">更多 IP 工具，在新标签打开</span></h2>
+  <div class="links">
+    <a class="btn" href="https://myip.ipip.net/" target="_blank" rel="noopener">ipip.net ↗</a>
+    <a class="btn" href="https://2026.ip138.com/" target="_blank" rel="noopener">ip138.com ↗</a>
+    <a class="btn" href="https://www.ip.cn/" target="_blank" rel="noopener">ip.cn ↗</a>
+    <a class="btn" href="https://cz88.net/" target="_blank" rel="noopener">cz88 纯真 ↗</a>
+    <a class="btn" href="https://tool.lu/ip" target="_blank" rel="noopener">tool.lu ↗</a>
+    <a class="btn" href="https://whatismyipaddress.com/" target="_blank" rel="noopener">WIMIA ↗</a>
+  </div>
+
+  <footer class="note">
+    <p><b>Max 版说明：</b>在 IP查询.html 基础上整合 ip_ds4pro / ip_mimo2.5p 中的独特接口，并额外加入 ipwhois.app、db-ip.com、ipwho.is、api.myip.com，
+    共计 <b>20 个</b>数据源 + 4 个出口视角。采用 <b>IP 多数投票</b> 确定真实 IP，再从一致接口中选取最详尽的归属地信息。</p>
+    <p style="margin-bottom:0">直接<b>双击本文件用浏览器打开即可</b>。若个别卡片显示失败，多为该接口临时限流，点卡片内"重试"或顶部"重新查询"即可。</p>
+  </footer>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+ *  IP 查询 Max —— 全接口聚合版 (Precision Enhanced)
+ *  整合来源：
+ *    - IP查询.html（基准：cz88, ip.sb, ipapi.co, ip.cn, ipify）
+ *    - ip_ds4pro.html（ipify64, httpbin, ipapi.is, ifconfig,
+ *                        icanhazip, freeipapi, ipip_net, ip138, ipcelou_mars）
+ *    - ip_mimo2.5p.html（ip-api.com, ipinfo.io, Cloudflare trace）
+ *    - 额外新增：ipwhois.app, db-ip.com, ipwho.is, api.myip.com
+ *
+ *  精度提升：
+ *   - 20 个接口交叉验证 + IP 多数投票
+ *   - 提取时区、经纬度、ASN 等扩展字段
+ *   - 从多数派 IP 中选取最详尽的归属地
+ * ============================================================ */
+
+const $ = (id)=>document.getElementById(id);
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- 通用请求工具 ---------- */
+async function fetchJSON(url, timeout=9000){
+  const c = new AbortController();
+  const t = setTimeout(()=>c.abort(), timeout);
+  try{
+    const r = await fetch(url, {signal:c.signal, cache:'no-store', credentials:'omit'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+async function fetchText(url, timeout=9000){
+  const c = new AbortController();
+  const t = setTimeout(()=>c.abort(), timeout);
+  try{
+    const r = await fetch(url, {signal:c.signal, cache:'no-store', credentials:'omit'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+let jsonpN = 0;
+function jsonp(buildUrl, timeout=9000){
+  return new Promise((resolve, reject)=>{
+    const cb = 'ipcb_' + Date.now().toString(36) + '_' + (++jsonpN);
+    const s = document.createElement('script');
+    let done = false;
+    const cleanup = ()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;}
+      if(s.parentNode) s.parentNode.removeChild(s); clearTimeout(t); };
+    window[cb] = (data)=>{ if(done) return; done=true; cleanup(); resolve(data); };
+    const t = setTimeout(()=>{ if(done) return; done=true; cleanup(); reject(new Error('超时')); }, timeout);
+    s.onerror = ()=>{ if(done) return; done=true; cleanup(); reject(new Error('加载失败')); };
+    s.src = buildUrl(cb);
+    document.head.appendChild(s);
+  });
+}
+
+/* 并发限流执行器 */
+async function runPool(items, worker, concurrency=2, gap=160){
+  let i = 0;
+  async function next(){
+    const idx = i++;
+    if(idx >= items.length) return;
+    await sleep(Math.random()*gap);
+    try{ await worker(items[idx], idx); }catch(e){}
+    return next();
+  }
+  await Promise.all(Array.from({length:Math.min(concurrency, items.length)}, next));
+}
+
+/* ---------- 工具函数 ---------- */
+function clean(v){ return (v===undefined||v===null) ? '' : String(v).trim(); }
+function joinLoc(arr){ return arr.map(clean).filter(x=>x && x!=='未知' && x!=='0' && x!=='None').join(' '); }
+function fmtLoc(lat, lng){
+  if(lat!==undefined && lng!==undefined && lat!==null && lng!==null){
+    const la = Number(lat), lo = Number(lng);
+    if(!isNaN(la) && !isNaN(lo)) return la.toFixed(4)+', '+lo.toFixed(4);
+  }
+  return '';
+}
+
+/* ============================================================
+ *  解析器 —— 统一返回 {ip, location, isp, extra, timezone, loc}
+ * ============================================================ */
+
+/* ── cz88 ── */
+function parseCz88(d){
+  if(!d || d.code!==200 || !d.data) throw new Error('返回异常');
+  const x = d.data;
+  return { ip:clean(x.ip), location:joinLoc([x.country, x.province, x.city, x.districts]),
+           isp:clean(x.isp), timezone:'', loc:'',
+           extra:joinLoc([x.netWorkType, x.asn ? ('ASN '+x.asn) : '']) };
+}
+
+/* ── ip.sb (JSONP) ── */
+function parseIpSb(d){
+  if(!d || !d.ip) throw new Error('返回异常');
+  return { ip:clean(d.ip), location:joinLoc([d.country, d.region, d.city]),
+           isp:clean(d.isp || d.organization), timezone:clean(d.timezone), loc:fmtLoc(d.latitude, d.longitude),
+           extra:d.asn ? ('AS'+d.asn+' '+clean(d.asn_organization)) : '' };
+}
+
+/* ── ipapi.co ── */
+function parseIpapi(d){
+  if(!d || !d.ip || d.error) throw new Error(clean(d && d.reason) || '返回异常/限流');
+  return { ip:clean(d.ip), location:joinLoc([d.country_name, d.region, d.city]),
+           isp:clean(d.org), timezone:clean(d.timezone), loc:fmtLoc(d.latitude, d.longitude),
+           extra:clean(d.asn) };
+}
+
+/* ── ip-api.com ── */
+function parseIpApiCom(d){
+  if(!d || d.status!=='success' || !d.query) throw new Error(d && d.message ? d.message : '返回异常');
+  return { ip:clean(d.query), location:joinLoc([d.country, d.regionName, d.city]),
+           isp:clean(d.isp || d.org), timezone:clean(d.timezone), loc:fmtLoc(d.lat, d.lon),
+           extra:joinLoc([d.zip ? ('ZIP:'+d.zip) : '', d.as ? ('AS'+d.as) : '']) };
+}
+
+/* ── ipinfo.io ── */
+function parseIpinfo(d){
+  if(!d || !d.ip) throw new Error('返回异常');
+  return { ip:clean(d.ip), location:joinLoc([d.country, d.region, d.city]),
+           isp:clean(d.org), timezone:clean(d.timezone), loc:clean(d.loc),
+           extra:joinLoc([d.postal ? ('ZIP:'+d.postal) : '', d.hostname]) };
+}
+
+/* ── ipapi.is ── */
+function parseIpapiIs(d){
+  if(!d || !d.ip) throw new Error('返回异常');
+  const loc = d.location || {};
+  const asn = d.asn || {};
+  return { ip:clean(d.ip), location:joinLoc([loc.country, loc.city]),
+           isp:clean(asn.org), timezone:clean(loc.timezone), loc:fmtLoc(loc.latitude, loc.longitude),
+           extra:clean(asn.asn ? 'AS'+asn.asn : '') };
+}
+
+/* ── freeipapi ── */
+function parseFreeipapi(d){
+  if(!d || !d.ipAddress) throw new Error('返回异常');
+  return { ip:clean(d.ipAddress), location:joinLoc([d.countryName, d.regionName, d.cityName]),
+           isp:clean(d.isp), timezone:clean(d.timeZone), loc:fmtLoc(d.latitude, d.longitude),
+           extra:clean(d.organization) };
+}
+
+/* ── ifconfig.me ── */
+function parseIfconfig(d){
+  if(!d || !d.ip_addr) throw new Error('返回异常');
+  return { ip:clean(d.ip_addr), location:joinLoc([d.country, d.region, d.city]),
+           isp:clean(d.organization), timezone:clean(d.timezone), loc:fmtLoc(d.latitude, d.longitude),
+           extra:joinLoc([d.asn]) };
+}
+
+/* ── IP.CN (text) ── */
+function parseIpCn(text){
+  const ipm = text.match(/((?:\d{1,3}\.){3}\d{1,3})/) || text.match(/([0-9a-fA-F:]{2,}:[0-9a-fA-F:]+)/);
+  if(!ipm) throw new Error('解析失败');
+  const locm = text.match(/归属地[:：]\s*([^\r\n]+)/);
+  return { ip:ipm[0], location:locm ? locm[1].trim() : '', isp:'', timezone:'', loc:'', extra:'' };
+}
+
+/* ── ipip.net (text) ── */
+function parseIpipNet(text){
+  const ipm = text.match(/((?:\d{1,3}\.){3}\d{1,3})/);
+  if(!ipm) throw new Error('解析失败');
+  const rest = text.replace(ipm[0], '').trim();
+  return { ip:ipm[0], location:rest.replace(/^[：:\s]+/, '').trim(), isp:'', timezone:'', loc:'', extra:'' };
+}
+
+/* ── ip138 (text) ── */
+function parseIp138(text){
+  const ipm = text.match(/((?:\d{1,3}\.){3}\d{1,3})/);
+  if(!ipm) throw new Error('解析失败');
+  return { ip:ipm[0], location:'', isp:'', timezone:'', loc:'', extra:text.trim().substring(0, 200) };
+}
+
+/* ── ipify / ipify64 ── */
+function parseIpify(d){ if(!d||!d.ip) throw new Error('返回异常'); return {ip:clean(d.ip), location:'', isp:'', timezone:'', loc:'', extra:''}; }
+function parseIpify64(d){ if(!d||!d.ip) throw new Error('返回异常'); return {ip:clean(d.ip), location:'IPv6 优先出口', isp:'', timezone:'', loc:'', extra:''}; }
+
+/* ── httpbin ── */
+function parseHttpbin(d){
+  if(!d || !d.origin) throw new Error('返回异常');
+  return { ip:clean(d.origin).split(',')[0].trim(), location:'', isp:'', timezone:'', loc:'', extra:'' };
+}
+
+/* ── icanhazip ── */
+function parseIcanhazip(text){ const ip=text.trim(); if(!ip) throw new Error('返回异常'); return {ip, location:'', isp:'', timezone:'', loc:'', extra:''}; }
+
+/* ── Cloudflare trace ── */
+function parseCloudflare(text){
+  const lines = text.split('\n'); const data = {};
+  lines.forEach(line=>{ const [k,v]=line.split('='); if(k&&v) data[k.trim()]=v.trim(); });
+  if(!data.ip) throw new Error('解析失败');
+  return { ip:clean(data.ip), location:clean(data.loc||data.colo), isp:'', timezone:'', loc:'', extra:'CF colo:'+clean(data.colo||'') };
+}
+
+/* ── 新增：ipwhois.app ── */
+function parseIpwhois(d){
+  if(!d || !d.ip || !d.success) throw new Error(d&&d.message ? d.message : '返回异常');
+  return { ip:clean(d.ip), location:joinLoc([d.country, d.region, d.city]),
+           isp:clean(d.isp || d.org), timezone:clean(d.timezone), loc:fmtLoc(d.latitude, d.longitude),
+           extra:joinLoc([d.type, d.asn ? ('AS'+d.asn) : '' ]) };
+}
+
+/* ── 新增：db-ip.com ── */
+function parseDbIp(d){
+  if(!d || !d.ipAddress) throw new Error('返回异常');
+  return { ip:clean(d.ipAddress), location:joinLoc([d.countryName, d.stateProv, d.city]),
+           isp:'', timezone:'', loc:'',
+           extra:clean(d.organization||d.isp||'') };
+}
+
+/* ── 新增：ipwho.is ── */
+function parseIpwhoIs(d){
+  if(!d || !d.ip || !d.success) throw new Error(d&&d.message ? d.message : '返回异常');
+  const conn = d.connection || {};
+  const tz = d.timezone || {};
+  return { ip:clean(d.ip), location:joinLoc([d.country, d.region, d.city]),
+           isp:clean(conn.isp || conn.org), timezone:clean(tz.id || d.timezone),
+           loc:fmtLoc(d.latitude, d.longitude), extra:clean(conn.asn ? 'AS'+conn.asn : '') };
+}
+
+/* ── 新增：api.myip.com ── */
+function parseMyipCom(d){
+  if(!d || !d.ip) throw new Error('返回异常');
+  return { ip:clean(d.ip), location:clean(d.country), isp:'', timezone:'', loc:'',
+           extra:clean(d.cc) };
+}
+
+/* ============================================================
+ *  接口定义
+ * ============================================================ */
+const SRC = {
+  /* 原始 + ds4pro + mimo2.5p */
+  cz88:  {name:'纯真 CZ88', type:'json',  parse:parseCz88,
+          url:(ip)=>`https://cz88.net/api/cz88/ip/base?ip=${encodeURIComponent(ip||'')}`},
+  ipsb:  {name:'IP.SB',     type:'jsonp', parse:parseIpSb,
+          url:(ip,cb)=> ip ? `https://api.ip.sb/geoip/${encodeURIComponent(ip)}?callback=${cb}`
+                           : `https://api.ip.sb/geoip?callback=${cb}`},
+  ipapi: {name:'ipapi.co',  type:'json',  parse:parseIpapi,
+          url:(ip)=> ip ? `https://ipapi.co/${encodeURIComponent(ip)}/json/` : `https://ipapi.co/json/`},
+  ipapicom:{name:'ip-api.com', type:'json', parse:parseIpApiCom,
+          url:(ip)=> ip
+            ? `https://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,query`
+            : `https://ip-api.com/json/?fields=status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,query`},
+  ipinfo:{name:'ipinfo.io', type:'json', parse:parseIpinfo,
+          url:(ip)=> ip ? `https://ipinfo.io/${encodeURIComponent(ip)}/json` : `https://ipinfo.io/json`},
+  ipapi_is:{name:'ipapi.is', type:'json', parse:parseIpapiIs,
+          url:()=>`https://api.ipapi.is/`},
+  freeipapi:{name:'freeipapi', type:'json', parse:parseFreeipapi,
+          url:()=>`https://freeipapi.com/api/json`},
+  ifconfig:{name:'ifconfig.me', type:'json', parse:parseIfconfig,
+          url:()=>`https://ifconfig.me/all.json`},
+  ipcn:  {name:'IP.CN',     type:'text',  parse:parseIpCn,    url:()=>`https://my.ip.cn/`},
+  ipip_net:{name:'ipip.net', type:'text', parse:parseIpipNet, url:()=>`https://myip.ipip.net/`},
+  ip138:{name:'ip138',     type:'text',  parse:parseIp138,   url:()=>`https://2026.ip138.com/`},
+  ipify: {name:'ipify',     type:'json',  parse:parseIpify,   url:()=>`https://api.ipify.org?format=json`},
+  ipify64:{name:'ipify IPv6', type:'json', parse:parseIpify64, url:()=>`https://api64.ipify.org?format=json`},
+  httpbin:{name:'httpbin.org', type:'json', parse:parseHttpbin, url:()=>`https://httpbin.org/ip`},
+  icanhazip:{name:'icanhazip', type:'text', parse:parseIcanhazip, url:()=>`https://icanhazip.com`},
+  cloudflare:{name:'Cloudflare', type:'text', parse:parseCloudflare, url:()=>`https://1.1.1.1/cdn-cgi/trace`},
+
+  /* 额外新增 */
+  ipwhois:{name:'ipwhois.app', type:'json', parse:parseIpwhois,
+          url:(ip)=> ip ? `https://ipwhois.app/json/${encodeURIComponent(ip)}`
+                        : `https://ipwhois.app/json/`},
+  dbip:{name:'db-ip.com', type:'json', parse:parseDbIp,
+          url:()=>`https://api.db-ip.com/v2/free/self`},
+  ipwho_is:{name:'ipwho.is', type:'json', parse:parseIpwhoIs,
+          url:()=>`https://ipwho.is/`},
+  myipcom:{name:'api.myip.com', type:'json', parse:parseMyipCom,
+          url:()=>`https://api.myip.com`},
+};
+
+/* 本机 IP：按可靠性排序，geo 类优先 */
+const SOURCES_MYIP = [
+  SRC.cz88, SRC.ipsb, SRC.ipapi, SRC.ipapicom, SRC.ipinfo,
+  SRC.ipwhois, SRC.ipwho_is, SRC.ipapi_is, SRC.freeipapi, SRC.ifconfig,
+  SRC.dbip, SRC.myipcom,
+  SRC.ipcn, SRC.ipip_net, SRC.ip138,
+  SRC.ipify, SRC.ipify64, SRC.httpbin, SRC.cloudflare, SRC.icanhazip
+];
+
+/* 任意 IP 查询：支持 IP 参数的接口 */
+const SOURCES_LOOKUP = [
+  SRC.cz88, SRC.ipsb, SRC.ipapi, SRC.ipapicom, SRC.ipinfo,
+  SRC.ipwhois
+];
+
+/* 多地出口 */
+const REGIONS = [
+  {name:'🇨🇳 中国大陆出口', url:'https://cn.ipcelou.com/api/ip'},
+  {name:'🇭🇰 中国香港出口', url:'https://hk.ipcelou.com/api/ip'},
+  {name:'🇺🇸 美国出口',     url:'https://us.ipcelou.com/api/ip'},
+  {name:'☁️ AppSpot 出口',  url:'https://ipcelou-298103.appspot.com/api/ip'},
+];
+
+/* 执行单个接口请求 */
+async function querySource(s, ip){
+  if(s.type==='jsonp'){ return s.parse(await jsonp(cb=>s.url(ip, cb))); }
+  if(s.type==='text'){  return s.parse(await fetchText(s.url(ip))); }
+  return s.parse(await fetchJSON(s.url(ip)));
+}
+
+/* ============================================================
+ *  卡片 UI
+ * ============================================================ */
+function makeCard(name){
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `
+    <div class="name"><span>${name}</span><span class="badge run">查询中</span></div>
+    <div class="body">
+      <div class="skel" style="width:60%"></div>
+      <div class="skel" style="width:85%;margin-top:8px"></div>
+    </div>
+    <div class="mini"></div>`;
+  const badge = el.querySelector('.badge');
+  const body  = el.querySelector('.body');
+  const mini  = el.querySelector('.mini');
+  return {
+    el,
+    success(res){
+      badge.className='badge ok'; badge.textContent='成功';
+      const parts = [];
+      parts.push(`<div class="cip">${res.ip||'-'}</div>`);
+      if(res.location) parts.push(`<div class="cloc">📍 ${res.location}</div>`);
+      if(res.isp)      parts.push(`<div class="cextra">🏢 ${res.isp}</div>`);
+      if(res.timezone) parts.push(`<div class="ctz">🕐 ${res.timezone}</div>`);
+      if(res.loc)      parts.push(`<div class="ctz">📡 ${res.loc}</div>`);
+      if(res.extra)    parts.push(`<div class="cextra">${res.extra}</div>`);
+      body.innerHTML = parts.join('');
+      mini.innerHTML='';
+      if(res.ip){
+        const b=document.createElement('button'); b.textContent='复制';
+        b.onclick=()=>copy(res.ip); mini.appendChild(b);
+      }
+    },
+    fail(msg, onRetry){
+      badge.className='badge bad'; badge.textContent='失败';
+      body.innerHTML=`<div class="cerr">⚠️ ${msg||'请求失败'}</div>`;
+      mini.innerHTML='';
+      const b=document.createElement('button'); b.textContent='重试';
+      b.onclick=onRetry; mini.appendChild(b);
+    }
+  };
+}
+
+/* 渲染一组接口到指定网格 */
+async function renderSources(sources, gridEl, ip, onResult){
+  const cards = sources.map(s=>makeCard(s.name));
+  gridEl.replaceChildren(...cards.map(c=>c.el));
+  await runPool(sources, async (s, i)=>{
+    const run = async ()=>{
+      try{
+        const res = await querySource(s, ip);
+        cards[i].success(res);
+        if(onResult) onResult(res, i);
+      }catch(e){
+        cards[i].fail(e.message||'请求失败', ()=>{ retryCard(s, gridEl, cards, i, ip, onResult); });
+      }
+    };
+    await run();
+  });
+}
+async function retryCard(s, gridEl, cards, i, ip, onResult){
+  const fresh = makeCard(s.name);
+  gridEl.replaceChild(fresh.el, cards[i].el);
+  cards[i]=fresh;
+  try{
+    const res = await querySource(s, ip);
+    fresh.success(res);
+    if(onResult) onResult(res, i);
+  }catch(e){ fresh.fail(e.message||'请求失败', ()=>retryCard(s, gridEl, cards, i, ip, onResult)); }
+}
+
+/* ============================================================
+ *  智能投票共识 + Hero 选择
+ * ============================================================ */
+let allMyResults = [];
+
+/* 当没有早期 hero 结果时，在所有结果到位后统一选出最佳 */
+function pickBestHero(){
+  const results = allMyResults.filter(Boolean);
+  if(results.length===0) return null;
+
+  // 1. 统计 IP 票数
+  const ipVotes = {};
+  results.forEach(r=>{ if(r.ip){ ipVotes[r.ip]=(ipVotes[r.ip]||0)+1; } });
+  const sortedIPs = Object.entries(ipVotes).sort((a,b)=>b[1]-a[1]);
+  if(sortedIPs.length===0) return null;
+
+  const majorityIP = sortedIPs[0][0];
+  const majorityCount = sortedIPs[0][1];
+  const totalOK = results.length;
+
+  // 2. 从多数派 IP 中选取信息最全的结果
+  const majorityResults = results.filter(r=>r.ip===majorityIP);
+  // 评分：有 location +2, 有 isp +2, 有 timezone +1, 有 loc +1, 有 extra +1
+  const scored = majorityResults.map(r=>{
+    let score = 0;
+    if(r.location) score+=2;
+    if(r.isp) score+=2;
+    if(r.timezone) score+=1;
+    if(r.loc) score+=1;
+    if(r.extra) score+=1;
+    return {r, score};
+  }).sort((a,b)=>b.score-a.score);
+
+  const best = scored[0] ? scored[0].r : majorityResults[0];
+
+  // 3. 计算置信度
+  const ratio = majorityCount / totalOK;
+  let confLevel, confLabel;
+  if(ratio >= 0.8 || totalOK <= 2) { confLevel='high'; confLabel='高置信'; }
+  else if(ratio >= 0.5) { confLevel='mid'; confLabel='中置信'; }
+  else { confLevel='low'; confLabel='低置信'; }
+
+  return { best, majorityIP, majorityCount, totalOK, sortedIPs, confLevel, confLabel };
+}
+
+function updateHeroFromResults(){
+  const info = pickBestHero();
+  if(!info) { updateConsensusOnly(); return; }
+  const { best, majorityIP, majorityCount, totalOK, sortedIPs, confLevel, confLabel } = info;
+
+  $('hero').classList.remove('loading');
+  $('heroIp').textContent = majorityIP || '未获取到';
+  $('heroLoc').textContent = best.location ? ('📍 '+best.location) : '';
+  $('heroIsp').textContent = best.isp ? ('🏢 '+best.isp) : '';
+
+  // 时区 + 坐标
+  const tzParts = [];
+  if(best.timezone) tzParts.push('🕐 '+best.timezone);
+  if(best.loc) tzParts.push('📡 '+best.loc);
+  $('heroTz').textContent = tzParts.join('  ·  ');
+
+  $('heroLoc2').textContent = best.location ? best.location : '';
+  $('heroAsn').textContent = best.extra || '';
+
+  // 来源 + 置信度
+  $('heroSrc').innerHTML = `来源：${totalOK}/${SOURCES_MYIP.length} 接口  <span class="conf-badge ${confLevel}">${confLabel} ${Math.round(majorityCount/totalOK*100)}%</span>`;
+
+  $('copyBtn').dataset.ip = majorityIP || '';
+
+  // 一致性
+  updateConsensusUI(sortedIPs, totalOK);
+}
+
+function updateConsensusOnly(){
+  const results = allMyResults.filter(Boolean);
+  if(results.length===0) return;
+  const ipVotes = {};
+  results.forEach(r=>{ if(r.ip){ ipVotes[r.ip]=(ipVotes[r.ip]||0)+1; } });
+  const sortedIPs = Object.entries(ipVotes).sort((a,b)=>b[1]-a[1]);
+  updateConsensusUI(sortedIPs, results.length);
+}
+
+function updateConsensusUI(sortedIPs, totalOK){
+  if(sortedIPs.length===0) return;
+  const $c = $('consensus');
+  if(sortedIPs.length===1){
+    $c.innerHTML = `✅ <b>${totalOK}</b> 个接口全部一致 → ${sortedIPs[0][0]}`;
+    $c.style.color = 'var(--accent2)';
+  }else{
+    const parts = sortedIPs.map(([ip,n])=>`<b>${ip}</b> (${n}票)`);
+    $c.innerHTML = `⚠️ IP 不一致！${parts.join(' &nbsp;|&nbsp; ')}`;
+    $c.style.color = 'var(--warn)';
+  }
+  $('okCount').textContent = `${totalOK}/${SOURCES_MYIP.length} 成功`;
+}
+
+/* 收集结果，在所有请求完成后统一决策 */
+function onMyIpResult(res, idx){
+  allMyResults[idx] = res;
+  // 前几个结果先实时更新 hero，等全部完成后做最终投票
+  const results = allMyResults.filter(Boolean);
+  if(results.length <= 3){
+    // 早期：用第一个有 location 的结果
+    const withLoc = results.filter(r=>r.location);
+    const early = withLoc[0] || results[0];
+    if(early){
+      $('hero').classList.remove('loading');
+      $('heroIp').textContent = early.ip || '未获取到';
+      $('heroLoc').textContent = early.location ? ('📍 '+early.location) : '';
+      $('heroIsp').textContent = early.isp ? ('🏢 '+early.isp) : '';
+      $('heroTz').textContent = [early.timezone, early.loc].filter(Boolean).join('  ·  ');
+      $('heroSrc').textContent = '来源：'+SOURCES_MYIP[idx].name + '（投票进行中…）';
+      $('copyBtn').dataset.ip = early.ip || '';
+    }
+  }
+  updateConsensusOnly();
+}
+
+/* ============================================================
+ *  多地出口视角
+ * ============================================================ */
+async function renderRegions(){
+  const grid = $('regionGrid');
+  const cards = REGIONS.map(r=>makeCard(r.name));
+  grid.replaceChildren(...cards.map(c=>c.el));
+  await runPool(REGIONS, async (r, i)=>{
+    try{
+      const d = await fetchJSON(r.url);
+      const ip = (d && d.data && d.data.Remote_addr) || (d && d.data && d.data.ip) || (d && d.ip);
+      if(!ip) throw new Error('返回异常');
+      cards[i].success({ip, location:'', isp:'', timezone:'', loc:'', extra:''});
+    }catch(e){
+      cards[i].fail(e.message||'请求失败', async ()=>{
+        const fresh=makeCard(r.name); grid.replaceChild(fresh.el, cards[i].el); cards[i]=fresh;
+        try{ const d=await fetchJSON(r.url);
+          const ip=(d&&d.data&&d.data.Remote_addr)||(d&&d.data&&d.data.ip)||(d&&d.ip);
+          if(!ip) throw new Error('返回异常'); fresh.success({ip}); }
+        catch(err){ fresh.fail(err.message); }
+      });
+    }
+  });
+}
+
+/* ============================================================
+ *  复制 / Toast
+ * ============================================================ */
+let toastTimer;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1600);
+}
+async function copy(text){
+  if(!text){ toast('暂无可复制内容'); return; }
+  try{
+    if(navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(text); }
+    else { const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed';
+      ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); }
+    toast('已复制：'+text);
+  }catch(e){ toast('复制失败，请手动选择'); }
+}
+
+/* ============================================================
+ *  查询本机 IP
+ * ============================================================ */
+let myLoading=false;
+async function loadMyIp(){
+  if(myLoading) return; myLoading=true;
+  allMyResults = [];
+  $('hero').classList.add('loading');
+  $('heroIp').textContent='查询中…'; $('heroLoc').textContent=''; $('heroIsp').textContent=''; $('heroTz').textContent='';
+  $('heroLoc2').textContent=''; $('heroAsn').textContent=''; $('heroSrc').textContent='';
+  $('consensus').textContent=''; $('consensus').style.color=''; $('okCount').textContent='';
+  $('refreshBtn').disabled=true;
+  try{
+    await renderSources(SOURCES_MYIP, $('myGrid'), '', onMyIpResult);
+    // 全部完成后做最终投票决策
+    updateHeroFromResults();
+    if(allMyResults.filter(Boolean).length===0){
+      $('hero').classList.remove('loading');
+      $('heroIp').textContent='查询失败';
+      $('heroLoc').textContent='所有接口暂时不可用，请点"重新查询"重试';
+    }
+  } finally {
+    myLoading=false; $('refreshBtn').disabled=false;
+  }
+}
+
+/* ============================================================
+ *  查询任意 IP
+ * ============================================================ */
+function looksLikeIP(s){
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(s) || /^[0-9a-fA-F:]+:[0-9a-fA-F:]*$/.test(s);
+}
+let lookupLoading=false;
+async function doLookup(){
+  if(lookupLoading) return;
+  const ip = $('lookupInput').value.trim();
+  if(ip && !looksLikeIP(ip)){ toast('IP 格式不正确'); return; }
+  lookupLoading=true; $('lookupBtn').disabled=true;
+  try{
+    await renderSources(SOURCES_LOOKUP, $('lookupGrid'), ip, null);
+  } finally { lookupLoading=false; $('lookupBtn').disabled=false; }
+}
+
+/* ============================================================
+ *  事件绑定 & 启动
+ * ============================================================ */
+$('copyBtn').onclick   = ()=>copy($('copyBtn').dataset.ip || $('heroIp').textContent);
+$('refreshBtn').onclick= ()=>{ loadMyIp(); renderRegions(); };
+$('lookupBtn').onclick = doLookup;
+$('lookupMineBtn').onclick = ()=>{ $('lookupInput').value=''; doLookup(); };
+$('lookupInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doLookup(); });
+
+loadMyIp();
+renderRegions();
+</script>
+</body>
+</html>

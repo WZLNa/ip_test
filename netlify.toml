@@ -1,0 +1,15 @@
+# Netlify 部署配置
+
+[build]
+  # 无需构建，直接发布
+  publish = "."
+
+# 安全头 + 缓存优化
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    # 静态文件缓存 1 天（修改后记得改版本号或清缓存）
+    Cache-Control = "public, max-age=86400"
