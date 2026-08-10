@@ -4,12 +4,43 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">
-<title>IP 查询 Max · 全接口聚合版</title>
+<title>IP 查询 Max</title>
 <style>
   :root{
-    --bg1:#0b1220; --bg2:#111a2e; --card:rgba(255,255,255,.06); --card-br:rgba(255,255,255,.12);
-    --txt:#eaf0ff; --muted:#93a0bd; --accent:#4f8cff; --accent2:#22d3a6;
-    --ok:#22d3a6; --bad:#ff6b6b; --warn:#ffcc66; --shadow:0 10px 30px rgba(0,0,0,.35);
+    --bg1:#f4f6fb; --bg2:#e9edf6;
+    --card:rgba(255,255,255,.38); --card-br:rgba(13,20,40,.10);
+    --txt:#182036; --muted:#5c6b85; --accent:#2c64ed; --accent2:#0aa37e;
+    --ok:#0aa37e; --bad:#e5484d; --warn:#a86b00; --shadow:0 10px 30px rgba(30,50,100,.10);
+    --ip-grad1:#1a4fd0; --ip-grad2:#0a9d78;
+    --txt-soft:#3a4a66;
+    --note-bg:rgba(44,100,237,.08); --note-br:rgba(44,100,237,.25); --note-txt:#1a2c56;
+    --toast-bg:#ffffff;
+    --input-bg:rgba(255,255,255,.7);
+    --code-bg:rgba(13,20,40,.06); --code-txt:#3b4a66;
+    --btn-bg:rgba(255,255,255,.7); --glow-hover:rgba(13,20,40,.10);
+    --hero-tint1:rgba(44,100,237,.10); --hero-tint2:rgba(16,185,129,.08);
+    --ip6-line:rgba(90,107,133,.14); --ip6-line-br:rgba(90,107,133,.30); --ip6:#6a2fd0;
+    --accent-tint:rgba(10,163,126,.14); --warn-tint:rgba(168,107,0,.14); --bad-tint:rgba(229,72,77,.16);
+    --skel-a:rgba(13,20,40,.06); --skel-b:rgba(13,20,40,.16);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg1:#0d1117; --bg2:#11151d;
+      --card:rgba(255,255,255,.05); --card-br:rgba(255,255,255,.12);
+      --txt:#eaf0ff; --muted:#93a0bd; --accent:#4f8cff; --accent2:#22d3a6;
+      --ok:#22d3a6; --bad:#ff6b6b; --warn:#ffcc66; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --ip-grad1:#cfe0ff; --ip-grad2:#bff3e4;
+      --txt-soft:#cdd7f0;
+      --note-bg:rgba(79,140,255,.1); --note-br:rgba(79,140,255,.25); --note-txt:#cfe0ff;
+      --toast-bg:#1b2540;
+      --input-bg:rgba(255,255,255,.06);
+      --code-bg:rgba(255,255,255,.08); --code-txt:#cdd7f0;
+      --btn-bg:rgba(255,255,255,.08); --glow-hover:rgba(255,255,255,.16);
+      --hero-tint1:rgba(79,140,255,.18); --hero-tint2:rgba(34,211,166,.12);
+      --ip6-line:rgba(147,160,189,.08); --ip6-line-br:rgba(147,160,189,.28); --ip6:#d6b3ff;
+      --accent-tint:rgba(34,211,166,.16); --warn-tint:rgba(255,204,102,.16); --bad-tint:rgba(255,107,107,.16);
+      --skel-a:rgba(255,255,255,.06); --skel-b:rgba(255,255,255,.14);
+    }
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -17,48 +48,72 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
     color:var(--txt); min-height:100vh; line-height:1.5;
     background:
-      radial-gradient(1200px 600px at 80% -10%, rgba(79,140,255,.20), transparent 60%),
-      radial-gradient(900px 500px at -10% 20%, rgba(34,211,166,.16), transparent 55%),
-      linear-gradient(160deg, var(--bg1), var(--bg2));
+      radial-gradient(1000px 600px at 85% -10%, rgba(44,100,237,.20), transparent 60%),
+      radial-gradient(800px 500px at -5% 25%, rgba(10,163,126,.16), transparent 55%),
+      radial-gradient(700px 500px at 60% 120%, rgba(168,85,247,.14), transparent 60%),
+      linear-gradient(160deg, #ffffff, var(--bg2));
     background-attachment:fixed;
   }
+  @media (prefers-color-scheme: dark){
+    body{
+      background:
+        radial-gradient(1000px 600px at 85% -10%, rgba(79,140,255,.20), transparent 60%),
+        radial-gradient(800px 500px at -5% 25%, rgba(34,211,166,.15), transparent 55%),
+        radial-gradient(700px 500px at 60% 120%, rgba(168,85,247,.20), transparent 60%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+    }
+  }
+  /* 粒子背景层（固定全屏，内容浮于其上） */
+  .particles-bg{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden}
+  .particles-bg [data-container]{width:100%; height:100%}
+  .wrap{position:relative; z-index:1}
+  .ip6line{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px;
+    padding:8px 12px; border-radius:12px; background:var(--ip6-line); border:1px dashed var(--ip6-line-br); width:fit-content}
+  .ip6line[hidden]{display:none}
+  .ip6label{font-size:11px; font-weight:700; color:var(--accent2); background:var(--accent-tint); padding:2px 8px; border-radius:20px}
+  .ip6{font-size:15px; font-weight:700; word-break:break-all; color:var(--ip6)}
+  .ip6info{font-size:11px; color:var(--muted)}
+  .mini-copy{cursor:pointer; border:1px solid var(--card-br); color:var(--txt); background:var(--btn-bg);
+    padding:3px 9px; border-radius:8px; font-size:12px}
+  .mini-copy:hover{background:var(--glow-hover)}
   .wrap{max-width:1100px; margin:0 auto; padding:28px 18px 60px}
   header.top{display:flex; align-items:center; gap:12px; margin-bottom:6px; flex-wrap:wrap}
   header.top h1{font-size:22px; margin:0; letter-spacing:.5px}
   header.top .dot{width:10px;height:10px;border-radius:50%;background:var(--accent2);box-shadow:0 0 14px var(--accent2)}
-  header.top .ver{font-size:11px; color:var(--accent2); background:rgba(34,211,166,.12); padding:2px 10px; border-radius:12px}
+  header.top .ver{font-size:11px; color:var(--accent2); background:var(--accent-tint); padding:2px 10px; border-radius:12px}
   .sub{color:var(--muted); font-size:13px; margin:2px 0 22px}
 
   .hero{
     position:relative; border-radius:18px; padding:22px 22px 20px;
-    background:linear-gradient(135deg, rgba(79,140,255,.20), rgba(34,211,166,.12)), var(--card);
+    background:linear-gradient(135deg, var(--hero-tint1), var(--hero-tint2)), var(--card);
     border:1px solid var(--card-br); box-shadow:var(--shadow); overflow:hidden;
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   }
   .hero .label{font-size:13px; color:var(--muted); display:flex; align-items:center; gap:8px}
   .hero .ipline{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:6px 0 4px}
   .hero .ip{font-size:clamp(26px,6vw,42px); font-weight:800; letter-spacing:1px; word-break:break-all;
-    background:linear-gradient(90deg,#cfe0ff,#bff3e4); -webkit-background-clip:text; background-clip:text; color:transparent}
-  .hero .loc{color:#dfe7ff; font-size:15px}
+    background:linear-gradient(90deg,var(--ip-grad1),var(--ip-grad2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero .loc{color:var(--txt); font-size:15px}
   .hero .isp{color:var(--muted); font-size:13px; margin-top:2px}
   .hero .tz{color:var(--muted); font-size:12px; margin-top:1px}
   .hero .hero-extra{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px}
   .hero .hero-extra span{font-size:12px; color:var(--muted); display:inline-flex; align-items:center; gap:4px}
   .hero .conf-badge{display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; margin-left:6px}
-  .hero .conf-badge.high{background:rgba(34,211,166,.16); color:var(--ok)}
-  .hero .conf-badge.mid{background:rgba(255,204,102,.16); color:var(--warn)}
-  .hero .conf-badge.low{background:rgba(255,107,107,.16); color:var(--bad)}
+  .hero .conf-badge.high{background:var(--accent-tint); color:var(--ok)}
+  .hero .conf-badge.mid{background:var(--warn-tint); color:var(--warn)}
+  .hero .conf-badge.low{background:var(--bad-tint); color:var(--bad)}
   .hero .src{position:absolute; right:16px; top:14px; font-size:11px; color:var(--muted)}
   .hero.loading .ip{font-size:24px; background:none; color:var(--muted)}
 
   .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
   button, .btn{
-    cursor:pointer; border:1px solid var(--card-br); color:var(--txt); background:rgba(255,255,255,.08);
+    cursor:pointer; border:1px solid var(--card-br); color:var(--txt); background:var(--btn-bg);
     padding:9px 14px; border-radius:10px; font-size:13.5px; transition:.18s; font-family:inherit;
     display:inline-flex; align-items:center; gap:7px; text-decoration:none;
   }
-  button:hover,.btn:hover{background:rgba(255,255,255,.16); transform:translateY(-1px)}
+  button:hover,.btn:hover{background:var(--glow-hover); transform:translateY(-1px)}
   button:active{transform:translateY(0)}
-  button.primary{background:linear-gradient(135deg,var(--accent),#3b78ff); border-color:transparent}
+  button.primary{background:linear-gradient(135deg,var(--accent),#3b78ff); border-color:transparent; color:#fff}
   button.primary:hover{filter:brightness(1.08)}
   button:disabled{opacity:.5; cursor:not-allowed; transform:none}
 
@@ -71,59 +126,63 @@
   .card{
     border-radius:14px; padding:15px 16px; background:var(--card); border:1px solid var(--card-br);
     box-shadow:var(--shadow); min-height:104px; display:flex; flex-direction:column; gap:6px;
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   }
   .card .name{display:flex; align-items:center; justify-content:space-between; font-size:13.5px; font-weight:600}
   .card .name .badge{font-size:11px; padding:2px 8px; border-radius:20px; font-weight:600}
-  .badge.run{background:rgba(255,204,102,.16); color:var(--warn)}
-  .badge.ok{background:rgba(34,211,166,.16); color:var(--ok)}
-  .badge.bad{background:rgba(255,107,107,.16); color:var(--bad)}
-  .card .cip{font-size:18px; font-weight:700; word-break:break-all; color:#eaf2ff}
-  .card .cloc{font-size:12.5px; color:#cdd7f0}
+  .badge.run{background:var(--warn-tint); color:var(--warn)}
+  .badge.ok{background:var(--accent-tint); color:var(--ok)}
+  .badge.bad{background:var(--bad-tint); color:var(--bad)}
+  .card .cip{font-size:18px; font-weight:700; word-break:break-all; color:var(--txt)}
+  .card .cloc{font-size:12.5px; color:var(--txt-soft)}
   .card .cextra{font-size:11.5px; color:var(--muted)}
   .card .ctz{font-size:11px; color:var(--muted)}
   .card .cerr{font-size:12px; color:var(--bad)}
   .card .mini{margin-top:auto; display:flex; gap:8px}
   .card .mini button{padding:4px 9px; font-size:11.5px; border-radius:8px}
-  .skel{height:13px;border-radius:6px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.14),rgba(255,255,255,.06));
+  .skel{height:13px;border-radius:6px;background:linear-gradient(90deg,var(--skel-a),var(--skel-b),var(--skel-a));
     background-size:200% 100%; animation:sh 1.2s infinite}
   @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-  .region-note{display:flex;gap:8px;align-items:flex-start;background:rgba(79,140,255,.1);border:1px solid rgba(79,140,255,.25);
-    border-radius:12px;padding:10px 13px;font-size:12.5px;color:#cfe0ff;margin-bottom:14px}
+  .region-note{display:flex;gap:8px;align-items:flex-start;background:var(--note-bg);border:1px solid var(--note-br);
+    border-radius:12px;padding:10px 13px;font-size:12.5px;color:var(--note-txt);margin-bottom:14px}
 
   .lookup{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
   .lookup input{
     flex:1; min-width:220px; padding:11px 14px; border-radius:11px; font-size:15px; font-family:inherit;
-    background:rgba(255,255,255,.06); border:1px solid var(--card-br); color:var(--txt); outline:none;
+    background:var(--input-bg); border:1px solid var(--card-br); color:var(--txt); outline:none;
   }
-  .lookup input:focus{border-color:var(--accent); background:rgba(255,255,255,.1)}
-  .lookup input::placeholder{color:#6b779a}
+  .lookup input:focus{border-color:var(--accent); background:var(--input-bg)}
+  .lookup input::placeholder{color:var(--muted)}
 
   .links{display:flex; gap:10px; flex-wrap:wrap}
   footer.note{margin-top:36px; font-size:12px; color:var(--muted); border-top:1px solid var(--card-br); padding-top:16px}
-  footer.note code{background:rgba(255,255,255,.08); padding:1px 6px; border-radius:5px; color:#cdd7f0}
-  footer.note b{color:#cfe0ff}
+  footer.note code{background:var(--code-bg); padding:1px 6px; border-radius:5px; color:var(--code-txt)}
+  footer.note b{color:var(--note-txt)}
 
   .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
-    background:#1b2540; border:1px solid var(--card-br); color:var(--txt); padding:10px 18px; border-radius:12px;
+    background:var(--toast-bg); border:1px solid var(--card-br); color:var(--txt); padding:10px 18px; border-radius:12px;
     box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:.25s; font-size:13.5px; z-index:50}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+<div class="particles-bg" data-main-particles-component data-theme="light" data-ring-width="0.006" data-ring-width2="0.107" data-ring-displacement="0.62" data-density="230" data-particles-scale="0.59">
+  <div data-container></div>
+</div>
 <div class="wrap">
 
   <header class="top">
     <span class="dot"></span>
     <h1>IP 查询 Max</h1>
-    <span class="ver">全接口聚合版</span>
+    <span class="ver">全接口</span>
   </header>
   <p class="sub">整合 20 个公开接口 + 4 地出口视角 · 支持查询任意 IP · 纯前端运行 · 智能投票共识</p>
 
   <!-- 本机公网 IP -->
   <div class="hero loading" id="hero">
     <div class="src" id="heroSrc"></div>
-    <div class="label">本机公网 IP</div>
+    <div class="label">🌐 本机公网 IP</div>
     <div class="ipline">
       <span class="ip" id="heroIp">查询中…</span>
       <button class="primary" id="copyBtn" title="复制 IP">⧉ 复制</button>
@@ -135,6 +194,12 @@
       <span id="heroLoc2"></span>
       <span id="heroAsn"></span>
     </div>
+    <div class="ip6line" id="ip6Row" hidden>
+      <span class="ip6label">🟣 IPv6</span>
+      <span class="ip6" id="heroIp6">-</span>
+      <button class="mini-copy" id="copyBtn6" title="复制 IPv6">⧉ 复制</button>
+      <span class="ip6info" id="heroIp6Info"></span>
+    </div>
     <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span id="consensus" style="font-size:12px"></span>
     </div>
@@ -144,7 +209,7 @@
   </div>
 
   <!-- 多接口交叉验证 -->
-  <h2 class="sec">多接口交叉验证 <span class="tag">同时调用 20 个接口，结果一致更可信</span><span class="count" id="okCount"></span></h2>
+  <h2 class="sec">🔎 多接口交叉验证 <span class="tag">同时调用 20 个接口，结果一致更可信</span><span class="count" id="okCount"></span></h2>
   <p class="hint">不同接口的归属地数据库不同，城市/运营商略有差异属正常现象。</p>
   <div class="grid" id="myGrid"></div>
 
@@ -157,7 +222,7 @@
   <div class="grid" id="regionGrid"></div>
 
   <!-- 查询任意 IP -->
-  <h2 class="sec">查询任意 IP</h2>
+  <h2 class="sec">🎯 查询任意 IP</h2>
   <p class="hint">输入一个 IPv4 / IPv6 地址，查询其归属地（留空则查本机）。支持 7 个接口交叉验证。</p>
   <div class="lookup">
     <input id="lookupInput" type="text" placeholder="例如 8.8.8.8 / 1.1.1.1 / 240e::1" autocomplete="off" spellcheck="false">
@@ -167,7 +232,7 @@
   <div class="grid" id="lookupGrid"></div>
 
   <!-- 其他接口（浏览器限制，手动打开） -->
-  <h2 class="sec">其他链接 <span class="tag">更多 IP 工具，在新标签打开</span></h2>
+  <h2 class="sec">🧩 其他链接 <span class="tag">更多 IP 工具，在新标签打开</span></h2>
   <div class="links">
     <a class="btn" href="https://myip.ipip.net/" target="_blank" rel="noopener">ipip.net ↗</a>
     <a class="btn" href="https://2026.ip138.com/" target="_blank" rel="noopener">ip138.com ↗</a>
@@ -458,11 +523,11 @@ const SRC = {
 
 /* 本机 IP：按可靠性排序，geo 类优先 */
 const SOURCES_MYIP = [
-  SRC.cz88, SRC.ipsb, SRC.ipapi, SRC.ipapicom, SRC.ipinfo,
-  SRC.ipwhois, SRC.ipwho_is, SRC.ipapi_is, SRC.freeipapi, SRC.ifconfig,
-  SRC.dbip, SRC.myipcom,
-  SRC.ipcn, SRC.ipip_net, SRC.ip138,
-  SRC.ipify, SRC.ipify64, SRC.httpbin, SRC.cloudflare, SRC.icanhazip
+  SRC.cz88, SRC.ipip_net, SRC.ipinfo,
+  SRC.ipwhois, SRC.ipwho_is, SRC.ipapi_is, SRC.ifconfig,
+  SRC.ipcn, SRC.ip138,
+  SRC.ipify, SRC.ipify64, SRC.httpbin, SRC.icanhazip,
+  SRC.ipsb, SRC.ipapi, SRC.freeipapi, SRC.dbip, SRC.myipcom, SRC.ipapicom, SRC.cloudflare
 ];
 
 /* 任意 IP 查询：支持 IP 参数的接口 */
@@ -563,24 +628,31 @@ async function retryCard(s, gridEl, cards, i, ip, onResult){
  * ============================================================ */
 let allMyResults = [];
 
-/* 当没有早期 hero 结果时，在所有结果到位后统一选出最佳 */
-function pickBestHero(){
-  const results = allMyResults.filter(Boolean);
-  if(results.length===0) return null;
+/* 判断 IP 地址族：v4 / v6 */
+function ipFamily(ip){
+  const s = String(ip||'').trim();
+  if(!s) return '';
+  return s.indexOf(':') !== -1 ? 'v6' : 'v4';
+}
 
-  // 1. 统计 IP 票数
+/* 按地址族分组 */
+function familyVotes(results){
+  const g = {v4:[], v6:[]};
+  results.forEach(r=>{ if(r && r.ip){ const f=ipFamily(r.ip); if(g[f]) g[f].push(r); } });
+  return g;
+}
+
+/* 对单个地址族做多数投票，选出信息最全的结果并算置信度 */
+function pickFamilyBest(list){
+  if(!list || !list.length) return null;
   const ipVotes = {};
-  results.forEach(r=>{ if(r.ip){ ipVotes[r.ip]=(ipVotes[r.ip]||0)+1; } });
-  const sortedIPs = Object.entries(ipVotes).sort((a,b)=>b[1]-a[1]);
-  if(sortedIPs.length===0) return null;
-
-  const majorityIP = sortedIPs[0][0];
-  const majorityCount = sortedIPs[0][1];
-  const totalOK = results.length;
-
-  // 2. 从多数派 IP 中选取信息最全的结果
-  const majorityResults = results.filter(r=>r.ip===majorityIP);
-  // 评分：有 location +2, 有 isp +2, 有 timezone +1, 有 loc +1, 有 extra +1
+  list.forEach(r=>{ ipVotes[r.ip]=(ipVotes[r.ip]||0)+1; });
+  const sorted = Object.entries(ipVotes).sort((a,b)=>b[1]-a[1]);
+  const majorityIP = sorted[0][0];
+  const majorityCount = sorted[0][1];
+  const totalOK = list.length;
+  const ratio = majorityCount / totalOK;
+  const majorityResults = list.filter(r=>r.ip===majorityIP);
   const scored = majorityResults.map(r=>{
     let score = 0;
     if(r.location) score+=2;
@@ -590,79 +662,107 @@ function pickBestHero(){
     if(r.extra) score+=1;
     return {r, score};
   }).sort((a,b)=>b.score-a.score);
-
   const best = scored[0] ? scored[0].r : majorityResults[0];
-
-  // 3. 计算置信度
-  const ratio = majorityCount / totalOK;
   let confLevel, confLabel;
   if(ratio >= 0.8 || totalOK <= 2) { confLevel='high'; confLabel='高置信'; }
   else if(ratio >= 0.5) { confLevel='mid'; confLabel='中置信'; }
   else { confLevel='low'; confLabel='低置信'; }
+  return { best, majorityIP, majorityCount, totalOK, sorted, ratio, confLevel, confLabel };
+}
 
-  return { best, majorityIP, majorityCount, totalOK, sortedIPs, confLevel, confLabel };
+/* 最终决策：分别返回 IPv4 与 IPv6 的共识 */
+function pickBestHero(){
+  const results = allMyResults.filter(Boolean);
+  if(results.length===0) return null;
+  const groups = familyVotes(results);
+  return { v4: pickFamilyBest(groups.v4), v6: pickFamilyBest(groups.v6), groups };
+}
+
+function setHeroEmpty(){
+  $('heroIp').textContent = '未检测到 IPv4';
+  $('heroLoc').textContent = ''; $('heroIsp').textContent = ''; $('heroTz').textContent = '';
+  $('heroLoc2').textContent = ''; $('heroAsn').textContent = '';
+  $('copyBtn').dataset.ip = '';
 }
 
 function updateHeroFromResults(){
   const info = pickBestHero();
-  if(!info) { updateConsensusOnly(); return; }
-  const { best, majorityIP, majorityCount, totalOK, sortedIPs, confLevel, confLabel } = info;
-
+  if(!info) { updateConsensusUI(); return; }
+  const { v4, v6 } = info;
   $('hero').classList.remove('loading');
-  $('heroIp').textContent = majorityIP || '未获取到';
-  $('heroLoc').textContent = best.location ? ('📍 '+best.location) : '';
-  $('heroIsp').textContent = best.isp ? ('🏢 '+best.isp) : '';
 
-  // 时区 + 坐标
-  const tzParts = [];
-  if(best.timezone) tzParts.push('🕐 '+best.timezone);
-  if(best.loc) tzParts.push('📡 '+best.loc);
-  $('heroTz').textContent = tzParts.join('  ·  ');
+  // ---- IPv4 ----
+  if(v4){
+    const { best, majorityIP, totalOK, ratio, confLevel, confLabel } = v4;
+    $('heroIp').textContent = majorityIP || '未获取到';
+    $('heroLoc').textContent = best.location ? ('📍 '+best.location) : '';
+    $('heroIsp').textContent = best.isp ? ('🏢 '+best.isp) : '';
+    const tzParts = [];
+    if(best.timezone) tzParts.push('🕐 '+best.timezone);
+    if(best.loc) tzParts.push('📡 '+best.loc);
+    $('heroTz').textContent = tzParts.join('  ·  ');
+    $('heroLoc2').textContent = best.location ? best.location : '';
+    $('heroAsn').textContent = best.extra || '';
+    $('copyBtn').dataset.ip = majorityIP || '';
+    $('heroSrc').innerHTML = `来源：${totalOK}/${SOURCES_MYIP.length} 接口  <span class="conf-badge ${confLevel}">IPv4 ${confLabel} ${Math.round(ratio*100)}%</span>`;
+  } else {
+    setHeroEmpty();
+    $('heroSrc').innerHTML = `来源：未检测到 IPv4`;
+  }
 
-  $('heroLoc2').textContent = best.location ? best.location : '';
-  $('heroAsn').textContent = best.extra || '';
+  // ---- IPv6 ----
+  const row = $('ip6Row');
+  if(v6){
+    row.hidden = false;
+    $('heroIp6').textContent = v6.majorityIP;
+    $('copyBtn6').dataset.ip = v6.majorityIP;
+    $('heroIp6Info').textContent = `${v6.majorityCount}/${v6.totalOK} 接口 · ${v6.confLabel} ${Math.round(v6.ratio*100)}%`;
+  } else {
+    row.hidden = true;
+    $('heroIp6').textContent = '-';
+    $('copyBtn6').dataset.ip = '';
+  }
 
-  // 来源 + 置信度
-  $('heroSrc').innerHTML = `来源：${totalOK}/${SOURCES_MYIP.length} 接口  <span class="conf-badge ${confLevel}">${confLabel} ${Math.round(majorityCount/totalOK*100)}%</span>`;
-
-  $('copyBtn').dataset.ip = majorityIP || '';
-
-  // 一致性
-  updateConsensusUI(sortedIPs, totalOK);
+  updateConsensusUI();
 }
 
 function updateConsensusOnly(){
-  const results = allMyResults.filter(Boolean);
-  if(results.length===0) return;
-  const ipVotes = {};
-  results.forEach(r=>{ if(r.ip){ ipVotes[r.ip]=(ipVotes[r.ip]||0)+1; } });
-  const sortedIPs = Object.entries(ipVotes).sort((a,b)=>b[1]-a[1]);
-  updateConsensusUI(sortedIPs, results.length);
+  updateConsensusUI();
 }
 
-function updateConsensusUI(sortedIPs, totalOK){
-  if(sortedIPs.length===0) return;
+/* 一致性提示：按地址族分别判断，IPv4 与 IPv6 互不干扰 */
+function updateConsensusUI(){
+  const results = allMyResults.filter(Boolean);
+  if(results.length===0) return;
+  const groups = familyVotes(results);
   const $c = $('consensus');
-  if(sortedIPs.length===1){
-    $c.innerHTML = `✅ <b>${totalOK}</b> 个接口全部一致 → ${sortedIPs[0][0]}`;
-    $c.style.color = 'var(--accent2)';
-  }else{
-    const parts = sortedIPs.map(([ip,n])=>`<b>${ip}</b> (${n}票)`);
-    $c.innerHTML = `⚠️ IP 不一致！${parts.join(' &nbsp;|&nbsp; ')}`;
-    $c.style.color = 'var(--warn)';
+  const parts = [];
+  for(const fam of ['v4','v6']){
+    const list = groups[fam];
+    if(!list.length) continue;
+    const votes = {};
+    list.forEach(r=>{ votes[r.ip]=(votes[r.ip]||0)+1; });
+    const sorted = Object.entries(votes).sort((a,b)=>b[1]-a[1]);
+    const label = fam==='v4' ? 'IPv4' : 'IPv6';
+    if(sorted.length===1){
+      parts.push(`✅ <b>${list.length}</b> 个${label}接口全部一致 → <b>${sorted[0][0]}</b>`);
+    }else{
+      const sub = sorted.map(([ip,n])=>`<b>${ip}</b>(${n}票)`);
+      parts.push(`⚠️ ${label} 不一致！${sub.join(' | ')}`);
+    }
   }
-  $('okCount').textContent = `${totalOK}/${SOURCES_MYIP.length} 成功`;
+  if(parts.length===0){ $c.textContent=''; $c.style.color=''; }
+  else { $c.innerHTML = parts.join(' &nbsp;&nbsp; '); $c.style.color = 'var(--accent2)'; }
+  $('okCount').textContent = `${results.length}/${SOURCES_MYIP.length} 成功`;
 }
 
 /* 收集结果，在所有请求完成后统一决策 */
 function onMyIpResult(res, idx){
   allMyResults[idx] = res;
-  // 前几个结果先实时更新 hero，等全部完成后做最终投票
+  // 前几个结果先实时更新 hero（仅做预览），等全部完成后做最终投票
   const results = allMyResults.filter(Boolean);
   if(results.length <= 3){
-    // 早期：用第一个有 location 的结果
-    const withLoc = results.filter(r=>r.location);
-    const early = withLoc[0] || results[0];
+    const early = results[0];
     if(early){
       $('hero').classList.remove('loading');
       $('heroIp').textContent = early.ip || '未获取到';
@@ -673,7 +773,7 @@ function onMyIpResult(res, idx){
       $('copyBtn').dataset.ip = early.ip || '';
     }
   }
-  updateConsensusOnly();
+  updateConsensusUI();
 }
 
 /* ============================================================
@@ -731,6 +831,7 @@ async function loadMyIp(){
   $('heroIp').textContent='查询中…'; $('heroLoc').textContent=''; $('heroIsp').textContent=''; $('heroTz').textContent='';
   $('heroLoc2').textContent=''; $('heroAsn').textContent=''; $('heroSrc').textContent='';
   $('consensus').textContent=''; $('consensus').style.color=''; $('okCount').textContent='';
+  $('ip6Row').hidden = true; $('heroIp6').textContent='-'; $('copyBtn6').dataset.ip='';
   $('refreshBtn').disabled=true;
   try{
     await renderSources(SOURCES_MYIP, $('myGrid'), '', onMyIpResult);
@@ -767,6 +868,7 @@ async function doLookup(){
  *  事件绑定 & 启动
  * ============================================================ */
 $('copyBtn').onclick   = ()=>copy($('copyBtn').dataset.ip || $('heroIp').textContent);
+$('copyBtn6').onclick  = ()=>copy($('copyBtn6').dataset.ip || $('heroIp6').textContent);
 $('refreshBtn').onclick= ()=>{ loadMyIp(); renderRegions(); };
 $('lookupBtn').onclick = doLookup;
 $('lookupMineBtn').onclick = ()=>{ $('lookupInput').value=''; doLookup(); };
@@ -775,5 +877,6 @@ $('lookupInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doLookup()
 loadMyIp();
 renderRegions();
 </script>
+<script src="./particles.bundle.js"></script>
 </body>
 </html>
